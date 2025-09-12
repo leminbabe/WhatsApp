@@ -9,21 +9,21 @@ class WhatsAppReportsBot {
     this.whatsappClient = null;
     this.apiServer = null;
     this.isRunning = false;
+    this.shutdownInProgress = false;
   }
 
   async start() {
     try {
       logger.info('Starting WhatsApp Reports Bot...');
 
-      // إنشاء المجلدات المطلوبة
       this.createRequiredDirectories();
 
-      // بدء تشغيل عميل واتساب
+      // Initialize WhatsApp client
       logger.info('Initializing WhatsApp client...');
       this.whatsappClient = new WhatsAppClient();
       await this.whatsappClient.start();
 
-      // بدء تشغيل خادم API
+      // Start API server
       logger.info('Starting API server...');
       this.apiServer = new APIServer(this.whatsappClient);
       await this.apiServer.start(process.env.PORT || 3000);
@@ -31,11 +31,11 @@ class WhatsAppReportsBot {
       this.isRunning = true;
       logger.info('WhatsApp Reports Bot started successfully!');
 
-      // معالجة إشارات النظام للإغلاق الآمن
       this.setupGracefulShutdown();
 
     } catch (error) {
       logger.error('Failed to start WhatsApp Reports Bot:', error);
+      await this.cleanup();
       process.exit(1);
     }
   }
@@ -44,7 +44,7 @@ class WhatsAppReportsBot {
     const directories = [
       path.join(__dirname, '../data'),
       path.join(__dirname, '../logs'),
-      path.join(__dirname, '../temp')
+      path.join(__dirname, '../data/auth')
     ];
 
     directories.forEach(dir => {
@@ -57,52 +57,44 @@ class WhatsAppReportsBot {
 
   setupGracefulShutdown() {
     const shutdown = async (signal) => {
+      if (this.shutdownInProgress) return;
+      this.shutdownInProgress = true;
+
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
       
-      if (this.isRunning) {
-        this.isRunning = false;
-
-        try {
-          // إيقاف خادم API
-          if (this.apiServer) {
-            logger.info('Stopping API server...');
-            await this.apiServer.stop();
-          }
-
-          // إيقاف عميل واتساب
-          if (this.whatsappClient) {
-            logger.info('Stopping WhatsApp client...');
-            await this.whatsappClient.stop();
-          }
-
-          logger.info('Graceful shutdown completed');
-          process.exit(0);
-
-        } catch (error) {
-          logger.error('Error during shutdown:', error);
-          process.exit(1);
-        }
+      try {
+        await this.cleanup();
+        logger.info('Graceful shutdown completed');
+        process.exit(0);
+      } catch (error) {
+        logger.error('Error during shutdown:', error);
+        process.exit(1);
       }
     };
 
-    // معالجة إشارات النظام
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGUSR2', () => shutdown('SIGUSR2')); // لـ nodemon
-
-    // معالجة الأخطاء غير المتوقعة
-    process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
-      shutdown('uncaughtException');
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      shutdown('unhandledRejection');
-    });
+    process.on('SIGUSR2', () => shutdown('SIGUSR2'));
   }
 
-  // الحصول على حالة النظام
+  async cleanup() {
+    this.isRunning = false;
+
+    const cleanupTasks = [];
+
+    if (this.apiServer) {
+      logger.info('Stopping API server...');
+      cleanupTasks.push(this.apiServer.stop());
+    }
+
+    if (this.whatsappClient) {
+      logger.info('Stopping WhatsApp client...');
+      cleanupTasks.push(this.whatsappClient.stop());
+    }
+
+    await Promise.allSettled(cleanupTasks);
+  }
+
   getStatus() {
     return {
       isRunning: this.isRunning,
@@ -114,7 +106,7 @@ class WhatsAppReportsBot {
   }
 }
 
-// بدء تشغيل البوت إذا تم تشغيل الملف مباشرة
+// Start bot if run directly
 if (require.main === module) {
   const bot = new WhatsAppReportsBot();
   bot.start().catch(error => {

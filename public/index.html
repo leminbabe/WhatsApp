@@ -41,11 +41,6 @@
             font-weight: 700;
         }
 
-        .header p {
-            color: #7f8c8d;
-            font-size: 1.1rem;
-        }
-
         .status-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -70,22 +65,13 @@
             animation: pulse 2s infinite;
         }
 
-        .status-dot.connected {
-            background-color: #27ae60;
-        }
-
-        .status-dot.connecting {
-            background-color: #f39c12;
-        }
-
-        .status-dot.disconnected {
-            background-color: #e74c3c;
-        }
+        .status-dot.connected { background-color: #27ae60; }
+        .status-dot.connecting { background-color: #f39c12; }
+        .status-dot.disconnected { background-color: #e74c3c; }
 
         @keyframes pulse {
-            0% { opacity: 1; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
-            100% { opacity: 1; }
         }
 
         .qr-container {
@@ -94,11 +80,7 @@
             background: #f8f9fa;
             border-radius: 10px;
             margin: 20px 0;
-        }
-
-        .qr-code {
-            max-width: 300px;
-            margin: 0 auto;
+            display: none;
         }
 
         .stats-grid {
@@ -176,13 +158,8 @@
             transform: translateX(-5px);
         }
 
-        .channel-item.high-reports {
-            border-right-color: #e74c3c;
-        }
-
-        .channel-item.medium-reports {
-            border-right-color: #f39c12;
-        }
+        .channel-item.high-reports { border-right-color: #e74c3c; }
+        .channel-item.medium-reports { border-right-color: #f39c12; }
 
         .channel-name {
             font-weight: 600;
@@ -238,14 +215,6 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-        }
-
-        .btn.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-
-        .btn.success {
-            background: linear-gradient(135deg, #27ae60, #229954);
         }
 
         .loading {
@@ -307,13 +276,6 @@
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
         }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
-        }
     </style>
 </head>
 <body>
@@ -328,9 +290,9 @@
                 <div class="status-dot disconnected" id="statusDot"></div>
                 <span id="statusText">جاري الاتصال...</span>
             </div>
-            <div id="qrContainer" class="qr-container" style="display: none;">
+            <div id="qrContainer" class="qr-container">
                 <h3>امسح رمز QR للاتصال بواتساب</h3>
-                <div id="qrCode" class="qr-code"></div>
+                <div id="qrCode"></div>
             </div>
         </div>
 
@@ -380,13 +342,8 @@
         <div class="panel">
             <h3>⚙️ إعدادات النظام</h3>
             <button class="btn" onclick="refreshData()">🔄 تحديث البيانات</button>
-            <button class="btn success" onclick="testNotifications()">🔔 اختبار الإشعارات</button>
-            <button class="btn danger" onclick="exportData()">📊 تصدير البيانات</button>
+            <button class="btn" onclick="exportData()">📊 تصدير البيانات</button>
         </div>
-    </div>
-
-    <div class="footer">
-        <p>© 2024 بوت واتساب لمراقبة البلاغات - تم التطوير بواسطة الذكاء الاصطناعي</p>
     </div>
 
     <script>
@@ -461,7 +418,6 @@
                         const qrContainer = document.getElementById('qrContainer');
                         const qrCode = document.getElementById('qrCode');
                         
-                        // استخدام مكتبة QR code generator
                         qrCode.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.data.qrCode)}" alt="QR Code">`;
                         qrContainer.style.display = 'block';
                     }
@@ -520,8 +476,7 @@
                             <div class="channel-stats">
                                 📊 ${channel.total_reports || 0} بلاغ إجمالي | 
                                 📅 ${channel.reports_today || 0} اليوم | 
-                                👥 ${channel.participant_count || 0} عضو |
-                                🕒 ${channel.last_activity ? new Date(channel.last_activity).toLocaleString('ar-SA') : 'غير محدد'}
+                                👥 ${channel.participant_count || 0} عضو
                             </div>
                         </div>
                     `;
@@ -591,7 +546,6 @@
                     this.isConnected = false;
                     console.log('Lost connection to live updates');
                     
-                    // إعادة الاتصال بعد 5 ثوان
                     setTimeout(() => {
                         if (!this.isConnected) {
                             this.setupEventSource();
@@ -610,9 +564,6 @@
                     case 'channel_update':
                         this.updateChannels();
                         break;
-                    case 'alert':
-                        this.showAlert(data.message || 'تنبيه جديد', 'warning');
-                        break;
                     case 'status_change':
                         this.updateStatus();
                         break;
@@ -623,12 +574,20 @@
                 const channelSearch = document.getElementById('channelSearch');
                 const reportSearch = document.getElementById('reportSearch');
 
+                let channelTimeout;
                 channelSearch.addEventListener('input', (e) => {
-                    this.searchChannels(e.target.value);
+                    clearTimeout(channelTimeout);
+                    channelTimeout = setTimeout(() => {
+                        this.searchChannels(e.target.value);
+                    }, 300);
                 });
 
+                let reportTimeout;
                 reportSearch.addEventListener('input', (e) => {
-                    this.searchReports(e.target.value);
+                    clearTimeout(reportTimeout);
+                    reportTimeout = setTimeout(() => {
+                        this.searchReports(e.target.value);
+                    }, 300);
                 });
             }
 
@@ -669,17 +628,8 @@
             }
 
             startPeriodicUpdates() {
-                // تحديث الحالة كل 10 ثوان
-                setInterval(() => {
-                    this.updateStatus();
-                }, 10000);
-
-                // تحديث الإحصائيات كل 30 ثانية
-                setInterval(() => {
-                    this.updateStats();
-                }, 30000);
-
-                // تحديث البيانات كل دقيقة
+                setInterval(() => this.updateStatus(), 10000);
+                setInterval(() => this.updateStats(), 30000);
                 setInterval(() => {
                     this.updateChannels();
                     this.updateReports();
@@ -699,28 +649,11 @@
             }
         }
 
-        // دالات عامة
         async function refreshData() {
             const dashboard = window.dashboard;
             if (dashboard) {
                 await dashboard.loadInitialData();
                 dashboard.showAlert('تم تحديث البيانات بنجاح', 'success');
-            }
-        }
-
-        async function testNotifications() {
-            try {
-                const response = await fetch('/api/test/notifications', { method: 'POST' });
-                const data = await response.json();
-                
-                if (data.success) {
-                    window.dashboard.showAlert('تم إرسال اختبار الإشعارات', 'success');
-                } else {
-                    window.dashboard.showAlert('فشل في اختبار الإشعارات', 'error');
-                }
-            } catch (error) {
-                console.error('Error testing notifications:', error);
-                window.dashboard.showAlert('خطأ في اختبار الإشعارات', 'error');
             }
         }
 
@@ -745,7 +678,6 @@
             }
         }
 
-        // بدء تشغيل لوحة التحكم
         document.addEventListener('DOMContentLoaded', () => {
             window.dashboard = new WhatsAppDashboard();
         });
