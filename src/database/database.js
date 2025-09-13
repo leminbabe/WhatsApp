@@ -246,10 +246,14 @@ class Database {
 
   close() {
     return new Promise((resolve) => {
-      this.db.close((err) => {
-        if (err) console.error('Database close error:', err);
+      if (this.db) {
+        this.db.close((err) => {
+          if (err) console.error('Database close error:', err);
+          resolve();
+        });
+      } else {
         resolve();
-      });
+      }
     });
   }
 }
