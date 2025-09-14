@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوت واتساب - مراقبة البلاغات</title>
+    <title>بوت واتساب - نظام Baileys المتطور</title>
     <style>
         * {
             margin: 0;
@@ -19,48 +19,53 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
 
         .header {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
             color: #2c3e50;
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             margin-bottom: 10px;
             font-weight: 700;
         }
 
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2rem;
+        }
+
         .status-card {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
 
         .status-indicator {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 20px;
+            margin-bottom: 25px;
         }
 
         .status-dot {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -70,50 +75,74 @@
         .status-dot.disconnected { background-color: #e74c3c; }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .status-text {
+            font-size: 1.3rem;
+            font-weight: 600;
         }
 
         .qr-container {
             text-align: center;
-            padding: 30px;
+            padding: 40px;
             background: #f8f9fa;
-            border-radius: 10px;
-            margin: 20px 0;
+            border-radius: 15px;
+            margin: 25px 0;
             display: none;
+        }
+
+        .qr-container h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .stat-card {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db, #2980b9);
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
         }
 
         .stat-number {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 700;
             color: #2c3e50;
             margin-bottom: 10px;
+            display: block;
         }
 
         .stat-label {
             color: #7f8c8d;
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 500;
         }
 
@@ -126,100 +155,145 @@
 
         .panel {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
 
         .panel h3 {
             color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.3rem;
+            margin-bottom: 25px;
+            font-size: 1.4rem;
             font-weight: 600;
-        }
-
-        .channels-list, .reports-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .channel-item, .report-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-right: 4px solid #3498db;
-            transition: all 0.3s ease;
-        }
-
-        .channel-item:hover, .report-item:hover {
-            background: #e9ecef;
-            transform: translateX(-5px);
-        }
-
-        .channel-item.high-reports { border-right-color: #e74c3c; }
-        .channel-item.medium-reports { border-right-color: #f39c12; }
-
-        .channel-name {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .channel-stats {
-            font-size: 0.9rem;
-            color: #7f8c8d;
-        }
-
-        .report-content {
-            font-size: 0.9rem;
-            color: #2c3e50;
-            margin-bottom: 8px;
-        }
-
-        .report-meta {
-            font-size: 0.8rem;
-            color: #7f8c8d;
             display: flex;
-            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
         }
 
         .search-box {
             width: 100%;
-            padding: 12px 15px;
+            padding: 15px 20px;
             border: 2px solid #e9ecef;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 1rem;
-            margin-bottom: 20px;
-            transition: border-color 0.3s ease;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
         }
 
         .search-box:focus {
             outline: none;
             border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .list-container {
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .list-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .list-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-right: 4px solid #3498db;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .list-item:hover {
+            background: #e9ecef;
+            transform: translateX(-8px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .list-item.high-priority { border-right-color: #e74c3c; }
+        .list-item.medium-priority { border-right-color: #f39c12; }
+
+        .item-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .item-content {
+            font-size: 0.95rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .item-meta {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
 
         .btn {
             background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 15px 30px;
+            border-radius: 12px;
             font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin: 5px;
+            margin: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn.success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .btn.warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
         }
 
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 50px;
             color: #7f8c8d;
         }
 
@@ -227,10 +301,10 @@
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            margin: 0 auto 25px;
         }
 
         @keyframes spin {
@@ -239,10 +313,13 @@
         }
 
         .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .alert.success {
@@ -263,17 +340,44 @@
             border: 1px solid #ffeaa7;
         }
 
+        .activity-log {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .log-entry {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border-right: 3px solid #3498db;
+        }
+
+        .log-entry.info { background: #e8f4fd; border-right-color: #3498db; }
+        .log-entry.success { background: #d4edda; border-right-color: #27ae60; }
+        .log-entry.warning { background: #fff3cd; border-right-color: #f39c12; }
+        .log-entry.error { background: #f8d7da; border-right-color: #e74c3c; }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
             }
             
             .header h1 {
-                font-size: 2rem;
+                font-size: 2.2rem;
             }
             
             .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+
+            .container {
+                padding: 15px;
             }
         }
     </style>
@@ -281,68 +385,98 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 بوت واتساب لمراقبة البلاغات</h1>
-            <p>نظام متطور لمراقبة وتحليل البلاغات والطلبات في واتساب</p>
+            <h1>🤖 بوت واتساب - نظام Baileys المتطور</h1>
+            <p>نظام متطور وموثوق لإدارة ومراقبة رسائل واتساب باستخدام مكتبة Baileys</p>
         </div>
 
         <div class="status-card">
             <div class="status-indicator">
                 <div class="status-dot disconnected" id="statusDot"></div>
-                <span id="statusText">جاري الاتصال...</span>
+                <span class="status-text" id="statusText">جاري الاتصال...</span>
             </div>
             <div id="qrContainer" class="qr-container">
                 <h3>امسح رمز QR للاتصال بواتساب</h3>
                 <div id="qrCode"></div>
+                <p style="margin-top: 15px; color: #7f8c8d;">
+                    افتح واتساب على هاتفك → الإعدادات → الأجهزة المرتبطة → ربط جهاز
+                </p>
             </div>
         </div>
 
         <div class="stats-grid">
             <div class="stat-card">
+                <div class="stat-number" id="totalMessages">-</div>
+                <div class="stat-label">إجمالي الرسائل</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalChats">-</div>
+                <div class="stat-label">المحادثات النشطة</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-number" id="totalReports">-</div>
                 <div class="stat-label">إجمالي البلاغات</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalChannels">-</div>
-                <div class="stat-label">القنوات المراقبة</div>
+                <div class="stat-number" id="totalRequests">-</div>
+                <div class="stat-label">إجمالي الطلبات</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="reportsToday">-</div>
-                <div class="stat-label">بلاغات اليوم</div>
+                <div class="stat-number" id="messagesToday">-</div>
+                <div class="stat-label">رسائل اليوم</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="pendingReports">-</div>
-                <div class="stat-label">بلاغات معلقة</div>
+                <div class="stat-number" id="pendingMessages">-</div>
+                <div class="stat-label">رسائل معلقة</div>
             </div>
         </div>
 
         <div class="main-content">
             <div class="panel">
-                <h3>📊 القنوات والمجموعات</h3>
-                <input type="text" class="search-box" id="channelSearch" placeholder="البحث في القنوات...">
-                <div id="channelsList" class="channels-list">
+                <h3>💬 المحادثات النشطة</h3>
+                <input type="text" class="search-box" id="chatSearch" placeholder="البحث في المحادثات...">
+                <div id="chatsList" class="list-container">
                     <div class="loading">
                         <div class="spinner"></div>
-                        جاري تحميل القنوات...
+                        جاري تحميل المحادثات...
                     </div>
                 </div>
             </div>
 
             <div class="panel">
-                <h3>📝 البلاغات الأخيرة</h3>
-                <input type="text" class="search-box" id="reportSearch" placeholder="البحث في البلاغات...">
-                <div id="reportsList" class="reports-list">
+                <h3>📝 الرسائل الأخيرة</h3>
+                <input type="text" class="search-box" id="messageSearch" placeholder="البحث في الرسائل...">
+                <div id="messagesList" class="list-container">
                     <div class="loading">
                         <div class="spinner"></div>
-                        جاري تحميل البلاغات...
+                        جاري تحميل الرسائل...
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel">
+        <div class="controls-panel">
             <h3>⚙️ إعدادات النظام</h3>
-            <button class="btn" onclick="refreshData()">🔄 تحديث البيانات</button>
-            <button class="btn" onclick="exportData()">📊 تصدير البيانات</button>
+            <button class="btn" onclick="refreshData()">
+                🔄 تحديث البيانات
+            </button>
+            <button class="btn success" onclick="optimizeDatabase()">
+                🗄️ تحسين قاعدة البيانات
+            </button>
+            <button class="btn warning" onclick="createBackup()">
+                💾 إنشاء نسخة احتياطية
+            </button>
+            <button class="btn danger" onclick="clearLogs()">
+                🗑️ مسح السجلات
+            </button>
+        </div>
+
+        <div class="activity-log">
+            <h3>📊 سجل النشاط المباشر</h3>
+            <div id="activityLog" class="list-container" style="max-height: 300px;">
+                <div class="log-entry info">
+                    <span>🚀 تم بدء تشغيل النظام...</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -351,14 +485,17 @@
             constructor() {
                 this.eventSource = null;
                 this.isConnected = false;
+                this.activityLog = [];
                 this.init();
             }
 
             async init() {
+                this.addLogEntry('info', '🔧 جاري تهيئة لوحة التحكم...');
                 await this.loadInitialData();
                 this.setupEventSource();
                 this.setupSearchHandlers();
                 this.startPeriodicUpdates();
+                this.addLogEntry('success', '✅ تم تهيئة لوحة التحكم بنجاح');
             }
 
             async loadInitialData() {
@@ -366,12 +503,13 @@
                     await Promise.all([
                         this.updateStatus(),
                         this.updateStats(),
-                        this.updateChannels(),
-                        this.updateReports()
+                        this.updateChats(),
+                        this.updateMessages()
                     ]);
+                    this.addLogEntry('success', '📊 تم تحميل البيانات الأولية');
                 } catch (error) {
                     console.error('Error loading initial data:', error);
-                    this.showAlert('خطأ في تحميل البيانات الأولية', 'error');
+                    this.addLogEntry('error', '❌ خطأ في تحميل البيانات الأولية');
                 }
             }
 
@@ -386,18 +524,32 @@
                         const statusText = document.getElementById('statusText');
                         const qrContainer = document.getElementById('qrContainer');
 
-                        if (whatsapp.isReady) {
+                        if (whatsapp.isConnected) {
                             statusDot.className = 'status-dot connected';
                             statusText.textContent = 'متصل بواتساب ✅';
                             qrContainer.style.display = 'none';
+                            if (!this.isConnected) {
+                                this.addLogEntry('success', '🟢 تم الاتصال بواتساب بنجاح');
+                                this.isConnected = true;
+                            }
                         } else if (whatsapp.hasQR) {
                             statusDot.className = 'status-dot connecting';
                             statusText.textContent = 'في انتظار مسح رمز QR';
                             await this.showQRCode();
-                        } else {
+                            this.addLogEntry('warning', '📱 في انتظار مسح رمز QR');
+                        } else if (whatsapp.isConnecting) {
                             statusDot.className = 'status-dot connecting';
                             statusText.textContent = 'جاري الاتصال...';
                             qrContainer.style.display = 'none';
+                            this.addLogEntry('info', '🔄 جاري الاتصال بواتساب...');
+                        } else {
+                            statusDot.className = 'status-dot disconnected';
+                            statusText.textContent = 'غير متصل ❌';
+                            qrContainer.style.display = 'none';
+                            if (this.isConnected) {
+                                this.addLogEntry('error', '🔴 انقطع الاتصال مع واتساب');
+                                this.isConnected = false;
+                            }
                         }
                     }
                 } catch (error) {
@@ -406,6 +558,7 @@
                     const statusText = document.getElementById('statusText');
                     statusDot.className = 'status-dot disconnected';
                     statusText.textContent = 'خطأ في الاتصال ❌';
+                    this.addLogEntry('error', '❌ خطأ في تحديث حالة الاتصال');
                 }
             }
 
@@ -418,65 +571,71 @@
                         const qrContainer = document.getElementById('qrContainer');
                         const qrCode = document.getElementById('qrCode');
                         
-                        qrCode.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.data.qrCode)}" alt="QR Code">`;
+                        qrCode.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.data.qrCode)}" alt="QR Code" style="border-radius: 10px;">`;
                         qrContainer.style.display = 'block';
                     }
                 } catch (error) {
                     console.error('Error showing QR code:', error);
+                    this.addLogEntry('error', '❌ خطأ في عرض رمز QR');
                 }
             }
 
             async updateStats() {
                 try {
-                    const response = await fetch('/api/stats/general');
+                    const response = await fetch('/api/stats');
                     const data = await response.json();
                     
                     if (data.success) {
                         const stats = data.data;
+                        document.getElementById('totalMessages').textContent = stats.total_messages || 0;
+                        document.getElementById('totalChats').textContent = stats.total_chats || 0;
                         document.getElementById('totalReports').textContent = stats.total_reports || 0;
-                        document.getElementById('totalChannels').textContent = stats.total_channels || 0;
-                        document.getElementById('reportsToday').textContent = stats.reports_today || 0;
-                        document.getElementById('pendingReports').textContent = stats.pending_reports || 0;
+                        document.getElementById('totalRequests').textContent = stats.total_requests || 0;
+                        document.getElementById('messagesToday').textContent = stats.messages_today || 0;
+                        document.getElementById('pendingMessages').textContent = stats.pending_messages || 0;
                     }
                 } catch (error) {
                     console.error('Error updating stats:', error);
+                    this.addLogEntry('error', '❌ خطأ في تحديث الإحصائيات');
                 }
             }
 
-            async updateChannels() {
+            async updateChats() {
                 try {
-                    const response = await fetch('/api/channels');
+                    const response = await fetch('/api/chats');
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.renderChannels(data.data);
+                        this.renderChats(data.data);
                     }
                 } catch (error) {
-                    console.error('Error updating channels:', error);
-                    document.getElementById('channelsList').innerHTML = '<div class="alert error">خطأ في تحميل القنوات</div>';
+                    console.error('Error updating chats:', error);
+                    document.getElementById('chatsList').innerHTML = '<div class="alert error">❌ خطأ في تحميل المحادثات</div>';
                 }
             }
 
-            renderChannels(channels) {
-                const container = document.getElementById('channelsList');
+            renderChats(chats) {
+                const container = document.getElementById('chatsList');
                 
-                if (!channels || channels.length === 0) {
-                    container.innerHTML = '<div class="alert warning">لا توجد قنوات مراقبة حالياً</div>';
+                if (!chats || chats.length === 0) {
+                    container.innerHTML = '<div class="alert warning">⚠️ لا توجد محادثات نشطة حالياً</div>';
                     return;
                 }
 
-                const html = channels.map(channel => {
-                    let reportClass = '';
-                    if (channel.total_reports > 20) reportClass = 'high-reports';
-                    else if (channel.total_reports > 5) reportClass = 'medium-reports';
+                const html = chats.map(chat => {
+                    let priorityClass = '';
+                    if (chat.messageCount > 100) priorityClass = 'high-priority';
+                    else if (chat.messageCount > 20) priorityClass = 'medium-priority';
 
                     return `
-                        <div class="channel-item ${reportClass}">
-                            <div class="channel-name">${channel.chat_name || 'قناة غير محددة'}</div>
-                            <div class="channel-stats">
-                                📊 ${channel.total_reports || 0} بلاغ إجمالي | 
-                                📅 ${channel.reports_today || 0} اليوم | 
-                                👥 ${channel.participant_count || 0} عضو
+                        <div class="list-item ${priorityClass}">
+                            <div class="item-title">${chat.name || 'محادثة غير محددة'}</div>
+                            <div class="item-content">
+                                النوع: ${chat.type === 'group' ? 'مجموعة' : 'محادثة خاصة'}
+                            </div>
+                            <div class="item-meta">
+                                <span>📊 ${chat.messageCount || 0} رسالة</span>
+                                <span>🕒 ${new Date(chat.lastActivity).toLocaleString('ar-SA')}</span>
                             </div>
                         </div>
                     `;
@@ -485,38 +644,47 @@
                 container.innerHTML = html;
             }
 
-            async updateReports() {
+            async updateMessages() {
                 try {
-                    const response = await fetch('/api/reports/recent?limit=20');
+                    const response = await fetch('/api/messages?limit=20');
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.renderReports(data.data);
+                        this.renderMessages(data.data);
                     }
                 } catch (error) {
-                    console.error('Error updating reports:', error);
-                    document.getElementById('reportsList').innerHTML = '<div class="alert error">خطأ في تحميل البلاغات</div>';
+                    console.error('Error updating messages:', error);
+                    document.getElementById('messagesList').innerHTML = '<div class="alert error">❌ خطأ في تحميل الرسائل</div>';
                 }
             }
 
-            renderReports(reports) {
-                const container = document.getElementById('reportsList');
+            renderMessages(messages) {
+                const container = document.getElementById('messagesList');
                 
-                if (!reports || reports.length === 0) {
-                    container.innerHTML = '<div class="alert warning">لا توجد بلاغات حالياً</div>';
+                if (!messages || messages.length === 0) {
+                    container.innerHTML = '<div class="alert warning">⚠️ لا توجد رسائل حالياً</div>';
                     return;
                 }
 
-                const html = reports.map(report => `
-                    <div class="report-item">
-                        <div class="report-content">${report.message_content.substring(0, 100)}${report.message_content.length > 100 ? '...' : ''}</div>
-                        <div class="report-meta">
-                            <span>👤 ${report.sender_name || 'غير محدد'}</span>
-                            <span>📍 ${report.chat_name || 'محادثة خاصة'}</span>
-                            <span>🕒 ${new Date(report.created_at).toLocaleString('ar-SA')}</span>
+                const html = messages.map(message => {
+                    let priorityClass = '';
+                    if (message.is_report) priorityClass = 'high-priority';
+                    else if (message.is_request) priorityClass = 'medium-priority';
+
+                    const messageType = message.is_report ? '📋 بلاغ' : message.is_request ? '❓ طلب' : '💬 رسالة';
+
+                    return `
+                        <div class="list-item ${priorityClass}">
+                            <div class="item-title">${message.sender_name || 'غير محدد'}</div>
+                            <div class="item-content">${message.message_content.substring(0, 100)}${message.message_content.length > 100 ? '...' : ''}</div>
+                            <div class="item-meta">
+                                <span>${messageType}</span>
+                                <span>📍 ${message.chat_name || 'محادثة خاصة'}</span>
+                                <span>🕒 ${new Date(message.created_at).toLocaleString('ar-SA')}</span>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 container.innerHTML = html;
             }
@@ -529,8 +697,7 @@
                 this.eventSource = new EventSource('/api/events');
                 
                 this.eventSource.onopen = () => {
-                    this.isConnected = true;
-                    console.log('Connected to live updates');
+                    this.addLogEntry('success', '🔗 تم الاتصال بالتحديثات المباشرة');
                 };
 
                 this.eventSource.onmessage = (event) => {
@@ -543,87 +710,86 @@
                 };
 
                 this.eventSource.onerror = () => {
-                    this.isConnected = false;
-                    console.log('Lost connection to live updates');
+                    this.addLogEntry('warning', '⚠️ انقطع الاتصال مع التحديثات المباشرة');
                     
                     setTimeout(() => {
-                        if (!this.isConnected) {
-                            this.setupEventSource();
-                        }
+                        this.setupEventSource();
                     }, 5000);
                 };
             }
 
             handleLiveUpdate(data) {
                 switch (data.type) {
+                    case 'new_message':
+                        this.updateStats();
+                        this.updateMessages();
+                        this.addLogEntry('info', '📨 تم استلام رسالة جديدة');
+                        break;
                     case 'new_report':
                         this.updateStats();
-                        this.updateReports();
-                        this.showAlert('تم استلام بلاغ جديد', 'success');
+                        this.updateMessages();
+                        this.addLogEntry('warning', '📋 تم استلام بلاغ جديد');
                         break;
-                    case 'channel_update':
-                        this.updateChannels();
-                        break;
-                    case 'status_change':
+                    case 'connection_update':
                         this.updateStatus();
                         break;
                 }
             }
 
             setupSearchHandlers() {
-                const channelSearch = document.getElementById('channelSearch');
-                const reportSearch = document.getElementById('reportSearch');
+                const chatSearch = document.getElementById('chatSearch');
+                const messageSearch = document.getElementById('messageSearch');
 
-                let channelTimeout;
-                channelSearch.addEventListener('input', (e) => {
-                    clearTimeout(channelTimeout);
-                    channelTimeout = setTimeout(() => {
-                        this.searchChannels(e.target.value);
+                let chatTimeout;
+                chatSearch.addEventListener('input', (e) => {
+                    clearTimeout(chatTimeout);
+                    chatTimeout = setTimeout(() => {
+                        this.searchChats(e.target.value);
                     }, 300);
                 });
 
-                let reportTimeout;
-                reportSearch.addEventListener('input', (e) => {
-                    clearTimeout(reportTimeout);
-                    reportTimeout = setTimeout(() => {
-                        this.searchReports(e.target.value);
+                let messageTimeout;
+                messageSearch.addEventListener('input', (e) => {
+                    clearTimeout(messageTimeout);
+                    messageTimeout = setTimeout(() => {
+                        this.searchMessages(e.target.value);
                     }, 300);
                 });
             }
 
-            async searchChannels(query) {
+            async searchChats(query) {
                 if (query.length < 2) {
-                    this.updateChannels();
+                    this.updateChats();
                     return;
                 }
 
                 try {
-                    const response = await fetch(`/api/channels?search=${encodeURIComponent(query)}`);
+                    const response = await fetch(`/api/chats?search=${encodeURIComponent(query)}`);
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.renderChannels(data.data);
+                        this.renderChats(data.data);
                     }
                 } catch (error) {
-                    console.error('Error searching channels:', error);
+                    console.error('Error searching chats:', error);
                 }
             }
 
-            async searchReports(query) {
+            async searchMessages(query) {
                 if (query.length < 2) {
-                    this.updateReports();
+                    this.updateMessages();
                     return;
                 }
 
                 try {
-                    const response = await fetch(`/api/reports/search?q=${encodeURIComponent(query)}`);
+                    const response = await fetch(`/api/messages/search?q=${encodeURIComponent(query)}`);
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.renderReports(data.data);
+                        this.renderMessages(data.data);
                     }
                 } catch (error) {
-                    console.error('Error searching reports:', error);
+                    console.error('Error searching messages:', error);
                 }
             }
 
@@ -631,15 +797,42 @@
                 setInterval(() => this.updateStatus(), 10000);
                 setInterval(() => this.updateStats(), 30000);
                 setInterval(() => {
-                    this.updateChannels();
-                    this.updateReports();
+                    this.updateChats();
+                    this.updateMessages();
                 }, 60000);
+            }
+
+            addLogEntry(level, message) {
+                const timestamp = new Date().toLocaleTimeString('ar-SA');
+                const entry = {
+                    level,
+                    message,
+                    timestamp
+                };
+
+                this.activityLog.unshift(entry);
+                if (this.activityLog.length > 50) {
+                    this.activityLog.pop();
+                }
+
+                this.renderActivityLog();
+            }
+
+            renderActivityLog() {
+                const container = document.getElementById('activityLog');
+                const html = this.activityLog.map(entry => `
+                    <div class="log-entry ${entry.level}">
+                        <span>[${entry.timestamp}] ${entry.message}</span>
+                    </div>
+                `).join('');
+
+                container.innerHTML = html;
             }
 
             showAlert(message, type = 'info') {
                 const alertDiv = document.createElement('div');
                 alertDiv.className = `alert ${type}`;
-                alertDiv.textContent = message;
+                alertDiv.innerHTML = `<span>${message}</span>`;
                 
                 document.body.insertBefore(alertDiv, document.body.firstChild);
                 
@@ -649,35 +842,62 @@
             }
         }
 
+        // Global functions
         async function refreshData() {
             const dashboard = window.dashboard;
             if (dashboard) {
+                dashboard.addLogEntry('info', '🔄 جاري تحديث البيانات...');
                 await dashboard.loadInitialData();
-                dashboard.showAlert('تم تحديث البيانات بنجاح', 'success');
+                dashboard.addLogEntry('success', '✅ تم تحديث البيانات بنجاح');
             }
         }
 
-        async function exportData() {
+        async function optimizeDatabase() {
             try {
-                const response = await fetch('/api/export/reports');
-                const blob = await response.blob();
+                const response = await fetch('/api/admin/vacuum', { method: 'POST' });
+                const data = await response.json();
                 
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reports_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                window.dashboard.showAlert('تم تصدير البيانات بنجاح', 'success');
+                if (data.success) {
+                    window.dashboard.addLogEntry('success', '🗄️ تم تحسين قاعدة البيانات بنجاح');
+                    window.dashboard.showAlert('تم تحسين قاعدة البيانات بنجاح', 'success');
+                } else {
+                    throw new Error(data.error);
+                }
             } catch (error) {
-                console.error('Error exporting data:', error);
-                window.dashboard.showAlert('خطأ في تصدير البيانات', 'error');
+                console.error('Error optimizing database:', error);
+                window.dashboard.addLogEntry('error', '❌ خطأ في تحسين قاعدة البيانات');
+                window.dashboard.showAlert('خطأ في تحسين قاعدة البيانات', 'error');
             }
         }
 
+        async function createBackup() {
+            try {
+                const response = await fetch('/api/admin/backup', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.dashboard.addLogEntry('success', `💾 تم إنشاء نسخة احتياطية: ${data.path}`);
+                    window.dashboard.showAlert('تم إنشاء النسخة الاحتياطية بنجاح', 'success');
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                console.error('Error creating backup:', error);
+                window.dashboard.addLogEntry('error', '❌ خطأ في إنشاء النسخة الاحتياطية');
+                window.dashboard.showAlert('خطأ في إنشاء النسخة الاحتياطية', 'error');
+            }
+        }
+
+        function clearLogs() {
+            if (confirm('هل أنت متأكد من مسح جميع السجلات؟')) {
+                window.dashboard.activityLog = [];
+                window.dashboard.renderActivityLog();
+                window.dashboard.addLogEntry('info', '🗑️ تم مسح السجلات');
+                window.dashboard.showAlert('تم مسح السجلات بنجاح', 'success');
+            }
+        }
+
+        // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
             window.dashboard = new WhatsAppDashboard();
         });

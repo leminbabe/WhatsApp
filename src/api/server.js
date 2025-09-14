@@ -1,18 +1,21 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
-const { body, validationResult } = require('express-validator');
-const path = require('path');
-const Database = require('../database/database');
-const logger = require('../utils/logger');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import compression from 'compression';
+import { body, validationResult } from 'express-validator';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import logger from '../utils/logger.js';
+import config from '../config/config.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class APIServer {
   constructor(whatsappClient) {
     this.app = express();
     this.whatsappClient = whatsappClient;
-    this.db = new Database();
     this.clients = new Set();
     this.server = null;
     
@@ -38,33 +41,24 @@ class APIServer {
     this.app.use(compression());
 
     // CORS
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-      credentials: true
-    }));
+    this.app.use(cors(config.server.cors));
 
     // Rate limiting
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
-      standardHeaders: true,
-      legacyHeaders: false
-    });
-    this.app.use('/api/', limiter);
+    this.app.use('/api/', rateLimit(config.rateLimit));
 
     // Body parsing
     this.app.use(express.json({ limit: '1mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
     // Static files
-    this.app.use(express.static(path.join(__dirname, '../../public')));
+    this.app.use(express.static(join(__dirname, '../../public')));
 
     // Request logging
     this.app.use((req, res, next) => {
       const start = Date.now();
       res.on('finish', () => {
         const duration = Date.now() - start;
-        logger.info(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+        logger.logRequest(req.method, req.path, res.statusCode, duration);
       });
       next();
     });
@@ -73,12 +67,18 @@ class APIServer {
   setupRoutes() {
     // Health check
     this.app.get('/health', (req, res) => {
-      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+      const status = this.whatsappClient.getStatus();
+      res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        whatsapp: status.isConnected,
+        database: status.dbHealthy
+      });
     });
 
     // Main page
     this.app.get('/', (req, res) => {
-      res.sendFile(path.join(__dirname, '../../public/index.html'));
+      res.sendFile(join(__dirname, '../../public/index.html'));
     });
 
     // System status
@@ -104,47 +104,47 @@ class APIServer {
         data: {
           qrCode: status.qrCode,
           hasQR: status.hasQR,
-          isReady: status.isReady
+          isConnected: status.isConnected
         }
       });
     });
 
-    // General statistics
-    this.app.get('/api/stats/general', async (req, res) => {
+    // Statistics
+    this.app.get('/api/stats', async (req, res) => {
       try {
-        const stats = await this.db.getGeneralStats();
+        const stats = await this.whatsappClient.db.getStats();
         res.json({ success: true, data: stats });
       } catch (error) {
-        logger.error('Error getting general stats:', error);
+        logger.error('Error getting stats:', error);
         res.status(500).json({ success: false, error: 'Failed to get statistics' });
       }
     });
 
-    // Channels list
-    this.app.get('/api/channels', async (req, res) => {
+    // Chats
+    this.app.get('/api/chats', async (req, res) => {
       try {
-        const channels = await this.db.getAllChannelsWithStats();
-        res.json({ success: true, data: channels });
+        const chats = await this.whatsappClient.getChats();
+        res.json({ success: true, data: chats });
       } catch (error) {
-        logger.error('Error getting channels:', error);
-        res.status(500).json({ success: false, error: 'Failed to get channels' });
+        logger.error('Error getting chats:', error);
+        res.status(500).json({ success: false, error: 'Failed to get chats' });
       }
     });
 
-    // Recent reports
-    this.app.get('/api/reports/recent', async (req, res) => {
+    // Recent messages
+    this.app.get('/api/messages', async (req, res) => {
       try {
         const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
-        const reports = await this.db.getRecentReports(limit);
-        res.json({ success: true, data: reports });
+        const messages = await this.whatsappClient.db.getRecentMessages(limit);
+        res.json({ success: true, data: messages });
       } catch (error) {
-        logger.error('Error getting recent reports:', error);
-        res.status(500).json({ success: false, error: 'Failed to get reports' });
+        logger.error('Error getting messages:', error);
+        res.status(500).json({ success: false, error: 'Failed to get messages' });
       }
     });
 
-    // Search reports
-    this.app.get('/api/reports/search', async (req, res) => {
+    // Search messages
+    this.app.get('/api/messages/search', async (req, res) => {
       try {
         const { q: query, chatId } = req.query;
         
@@ -155,15 +155,15 @@ class APIServer {
           });
         }
         
-        const reports = await this.db.searchReports(query.trim(), chatId);
-        res.json({ success: true, data: reports });
+        const messages = await this.whatsappClient.db.searchMessages(query.trim(), chatId);
+        res.json({ success: true, data: messages });
       } catch (error) {
-        logger.error('Error searching reports:', error);
-        res.status(500).json({ success: false, error: 'Failed to search reports' });
+        logger.error('Error searching messages:', error);
+        res.status(500).json({ success: false, error: 'Failed to search messages' });
       }
     });
 
-    // Send WhatsApp message
+    // Send message
     this.app.post('/api/whatsapp/send', [
       body('chatId').notEmpty().trim(),
       body('message').notEmpty().trim().isLength({ max: 1000 })
@@ -187,17 +187,6 @@ class APIServer {
       }
     });
 
-    // Get WhatsApp chats
-    this.app.get('/api/whatsapp/chats', async (req, res) => {
-      try {
-        const chats = await this.whatsappClient.getChats();
-        res.json({ success: true, data: chats });
-      } catch (error) {
-        logger.error('Error getting WhatsApp chats:', error);
-        res.status(500).json({ success: false, error: 'Failed to get chats' });
-      }
-    });
-
     // Server-Sent Events
     this.app.get('/api/events', (req, res) => {
       res.writeHead(200, {
@@ -215,16 +204,25 @@ class APIServer {
       });
     });
 
-    // Export data
-    this.app.get('/api/export/reports', async (req, res) => {
+    // Database operations
+    this.app.post('/api/admin/vacuum', async (req, res) => {
       try {
-        const reports = await this.db.getRecentReports(10000);
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', 'attachment; filename="reports.json"');
-        res.json(reports);
+        await this.whatsappClient.db.vacuum();
+        res.json({ success: true, message: 'Database optimized successfully' });
       } catch (error) {
-        logger.error('Error exporting reports:', error);
-        res.status(500).json({ success: false, error: 'Failed to export data' });
+        logger.error('Error vacuuming database:', error);
+        res.status(500).json({ success: false, error: 'Failed to optimize database' });
+      }
+    });
+
+    this.app.post('/api/admin/backup', async (req, res) => {
+      try {
+        const backupPath = `./data/backup_${Date.now()}.db`;
+        await this.whatsappClient.db.backup(backupPath);
+        res.json({ success: true, message: 'Backup created successfully', path: backupPath });
+      } catch (error) {
+        logger.error('Error creating backup:', error);
+        res.status(500).json({ success: false, error: 'Failed to create backup' });
       }
     });
 
@@ -252,11 +250,11 @@ class APIServer {
     });
   }
 
-  start(port = 3000) {
+  start(port = config.server.port) {
     return new Promise((resolve, reject) => {
       try {
-        this.server = this.app.listen(port, () => {
-          logger.info(`API Server started on port ${port}`);
+        this.server = this.app.listen(port, config.server.host, () => {
+          logger.info(`API Server started on ${config.server.host}:${port}`);
           resolve();
         });
 
@@ -281,4 +279,4 @@ class APIServer {
   }
 }
 
-module.exports = APIServer;
+export default APIServer;

@@ -1,33 +1,46 @@
-const winston = require('winston');
-const path = require('path');
-const fs = require('fs');
+import winston from 'winston';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import config from '../config/config.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Ensure logs directory exists
-const logsDir = path.join(__dirname, '../../logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+const logsDir = join(__dirname, '../../logs');
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
 }
 
-// Configure Winston logger
+// Create logger instance
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: config.logging.level,
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
     winston.format.json()
   ),
-  defaultMeta: { service: 'whatsapp-reports-bot' },
+  defaultMeta: { service: 'whatsapp-bot' },
   transports: [
-    new winston.transports.File({ 
-      filename: path.join(logsDir, 'error.log'), 
+    new winston.transports.File({
+      filename: join(logsDir, 'error.log'),
       level: 'error',
-      maxsize: 5242880,
-      maxFiles: 3
+      maxsize: 10485760, // 10MB
+      maxFiles: 3,
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
     }),
-    new winston.transports.File({ 
-      filename: path.join(logsDir, 'combined.log'),
-      maxsize: 5242880,
-      maxFiles: 3
+    new winston.transports.File({
+      filename: join(logsDir, 'combined.log'),
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
     })
   ]
 });
@@ -37,11 +50,11 @@ if (process.env.NODE_ENV !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.simple(),
+      winston.format.timestamp({ format: 'HH:mm:ss' }),
       winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
         let msg = `${timestamp} [${level}]: ${message}`;
         if (Object.keys(meta).length > 0) {
-          msg += ` ${JSON.stringify(meta)}`;
+          msg += ` ${JSON.stringify(meta, null, 2)}`;
         }
         return msg;
       })
@@ -49,14 +62,35 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-// Handle uncaught exceptions and rejections
+// Performance logging
+logger.logPerformance = (operation, duration, metadata = {}) => {
+  logger.info(`Performance: ${operation}`, {
+    duration: `${duration}ms`,
+    ...metadata
+  });
+};
+
+// Request logging
+logger.logRequest = (method, path, statusCode, duration, metadata = {}) => {
+  logger.info(`${method} ${path} - ${statusCode}`, {
+    duration: `${duration}ms`,
+    ...metadata
+  });
+};
+
+// WhatsApp event logging
+logger.logWhatsApp = (event, data = {}) => {
+  logger.info(`WhatsApp: ${event}`, data);
+};
+
+// Error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection:', { reason, promise });
+  logger.error('Unhandled Rejection:', { reason, promise: promise.toString() });
 });
 
-module.exports = logger;
+export default logger;

@@ -1,10 +1,11 @@
-const WhatsAppClient = require('./whatsapp/whatsapp-client');
-const APIServer = require('./api/server');
-const logger = require('./utils/logger');
-const path = require('path');
-const fs = require('fs');
+import BaileysClient from './whatsapp/baileys-client.js';
+import APIServer from './api/server.js';
+import logger from './utils/logger.js';
+import config from './config/config.js';
+import { existsSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
-class WhatsAppReportsBot {
+class WhatsAppBot {
   constructor() {
     this.whatsappClient = null;
     this.apiServer = null;
@@ -14,27 +15,29 @@ class WhatsAppReportsBot {
 
   async start() {
     try {
-      logger.info('Starting WhatsApp Reports Bot...');
+      logger.info('Starting WhatsApp Bot System...');
 
+      // Create required directories
       this.createRequiredDirectories();
 
       // Initialize WhatsApp client
-      logger.info('Initializing WhatsApp client...');
-      this.whatsappClient = new WhatsAppClient();
-      await this.whatsappClient.start();
+      logger.info('Initializing Baileys WhatsApp client...');
+      this.whatsappClient = new BaileysClient();
+      await this.whatsappClient.initialize();
 
       // Start API server
       logger.info('Starting API server...');
       this.apiServer = new APIServer(this.whatsappClient);
-      await this.apiServer.start(process.env.PORT || 3000);
+      await this.apiServer.start();
 
       this.isRunning = true;
-      logger.info('WhatsApp Reports Bot started successfully!');
+      logger.info('WhatsApp Bot System started successfully!');
+      logger.info(`Dashboard available at: http://localhost:${config.server.port}`);
 
       this.setupGracefulShutdown();
 
     } catch (error) {
-      logger.error('Failed to start WhatsApp Reports Bot:', error);
+      logger.error('Failed to start WhatsApp Bot System:', error);
       await this.cleanup();
       process.exit(1);
     }
@@ -42,14 +45,15 @@ class WhatsAppReportsBot {
 
   createRequiredDirectories() {
     const directories = [
-      path.join(__dirname, '../data'),
-      path.join(__dirname, '../logs'),
-      path.join(__dirname, '../data/auth')
+      dirname(config.database.path),
+      config.whatsapp.sessionPath,
+      './logs',
+      './data/reports'
     ];
 
     directories.forEach(dir => {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
         logger.info(`Created directory: ${dir}`);
       }
     });
@@ -101,18 +105,18 @@ class WhatsAppReportsBot {
       whatsapp: this.whatsappClient ? this.whatsappClient.getStatus() : null,
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      version: require('../package.json').version
+      version: '2.0.0'
     };
   }
 }
 
 // Start bot if run directly
-if (require.main === module) {
-  const bot = new WhatsAppReportsBot();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const bot = new WhatsAppBot();
   bot.start().catch(error => {
     console.error('Failed to start bot:', error);
     process.exit(1);
   });
 }
 
-module.exports = WhatsAppReportsBot;
+export default WhatsAppBot;
